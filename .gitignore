@@ -1,0 +1,51 @@
+# Python virtual environment
+
+backend/venv/
+venv/
+.venv/
+
+# Python cache files
+
+**pycache**/
+**/**pycache**/
+*.py[cod]
+
+# Environment variables and secrets
+
+.env
+.env.*
+!.env.example
+
+# Local database
+
+backend/civicconnect.db
+*.sqlite
+*.sqlite3
+
+# Uploaded civic issue photos
+
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Frontend dependencies
+
+frontend/node_modules/
+
+# Frontend build files
+
+frontend/dist/
+
+# Editor and operating system files
+
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Log files
+
+*.log
+
+# Temporary files
+
+*.tmp
+*.temp

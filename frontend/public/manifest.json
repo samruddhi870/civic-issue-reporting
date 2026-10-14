@@ -1,0 +1,18 @@
+{
+  "name": "CivicConnect - Citizen Civic Issue Reporting",
+  "short_name": "CivicConnect",
+  "description": "Report civic issues with photos and GPS. Track SLA timers with automated municipal escalations.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#026bc9",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
