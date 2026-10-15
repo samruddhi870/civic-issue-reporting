@@ -1,4 +1,5 @@
 
+
 pipeline {
     agent { label 'windows' }
 
@@ -10,11 +11,20 @@ pipeline {
             }
         }
 
+        stage('Test Source Code') {
+            steps {
+                bat 'python -m compileall -q backend'
+                bat 'npm --prefix frontend ci'
+                bat 'npm --prefix frontend run build'
+            }
+        }
+
         stage('Check Project Files') {
             steps {
                 bat 'dir'
                 bat 'docker --version'
                 bat 'docker compose version'
+                bat 'kubectl version --client'
             }
         }
 
@@ -46,14 +56,32 @@ pipeline {
                 }
             }
         }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                bat 'kubectl apply -f k8s'
+                bat 'kubectl rollout restart deployment/civic-backend'
+                bat 'kubectl rollout restart deployment/civic-frontend'
+                bat 'kubectl rollout status deployment/civic-backend --timeout=180s'
+                bat 'kubectl rollout status deployment/civic-frontend --timeout=180s'
+            }
+        }
+
+        stage('Verify Kubernetes') {
+            steps {
+                bat 'kubectl get deployments'
+                bat 'kubectl get pods'
+                bat 'kubectl get services'
+            }
+        }
     }
 
     post {
         success {
-            echo 'Civic Issue images built and pushed successfully!'
+            echo 'Build, tests, Docker push and Kubernetes deployment completed successfully!'
         }
         failure {
-            echo 'Pipeline failed. Check the stage logs.'
+            echo 'Pipeline failed. Check Console Output for the first error.'
         }
     }
 }
