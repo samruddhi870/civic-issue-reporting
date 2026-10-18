@@ -1,45 +1,26 @@
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: civic-backend
+  name: backend-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: civic-backend
+      app: backend
   template:
     metadata:
       labels:
-        app: civic-backend
+        app: backend
     spec:
       containers:
         - name: backend
-          image: samruddhi870/civic-issue-backend:latest
+          image: YOUR_DOCKERHUB_USERNAME/civic-issue-backend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 5000
-          env:
-            - name: FLASK_ENV
-              value: "production"
-            - name: SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: civic-app-secrets
-                  key: secret-key
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: civic-app-secrets
-                  key: jwt-secret
-            - name: DATABASE_URL
-              value: "sqlite:////app/instance/civic_issues.db"
           volumeMounts:
-            - name: backend-db
-              mountPath: /app/instance
-            - name: backend-uploads
+            - name: uploads
               mountPath: /app/uploads
       volumes:
-        - name: backend-db
-          emptyDir: {}
-        - name: backend-uploads
+        - name: uploads
           emptyDir: {}

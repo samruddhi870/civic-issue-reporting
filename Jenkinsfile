@@ -1,87 +1,110 @@
-
-
 pipeline {
-    agent { label 'windows' }
+    agent any
+
+    environment {
+        BACKEND_IMAGE = 'samruddhi870/civic-issue-backendd'
+        FRONTEND_IMAGE = 'samruddhi870/civic-issue-frontendd'
+        KUBECONFIG = '/home/ubuntu/.kube/config'
+    }
 
     stages {
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
                 checkout scm
-                echo 'Source code downloaded successfully.'
             }
         }
 
-        stage('Test Source Code') {
+        stage('Backend Tests') {
             steps {
-                bat 'python -m compileall -q backend'
-                bat 'npm --prefix frontend ci'
-                bat 'npm --prefix frontend run build'
+                sh '''
+                    docker run --rm \
+                      -v "$WORKSPACE/backend:/app" \
+                      -w /app \
+                      python:3.11-slim \
+                      sh -c 'pip install --no-cache-dir -r requirements.txt pytest && pytest -q'
+                '''
             }
         }
 
-        stage('Check Project Files') {
+        stage('Frontend Build Test') {
             steps {
-                bat 'dir'
-                bat 'docker --version'
-                bat 'docker compose version'
-                bat 'kubectl version --client'
+                sh '''
+                    docker run --rm \
+                      -v "$WORKSPACE/frontend:/app" \
+                      -w /app \
+                      node:20-alpine \
+                      sh -c 'npm ci && npm run build'
+                '''
             }
         }
 
-        stage('Build Backend Image') {
+        stage('Build Docker Images') {
             steps {
-                bat 'docker build -t civic-issue-backend:latest ./backend'
-                bat 'docker tag civic-issue-backend:latest samruddhi870/civic-issue-backend:latest'
+                sh '''
+                    docker build -t "$BACKEND_IMAGE:$BUILD_NUMBER" -t "$BACKEND_IMAGE:latest" backend
+                    docker build -t "$FRONTEND_IMAGE:$BUILD_NUMBER" -t "$FRONTEND_IMAGE:latest" frontend
+                '''
             }
         }
 
-        stage('Build Frontend Image') {
+        stage('Push Images') {
             steps {
-                bat 'docker build -t civic-issue-frontend:latest ./frontend'
-                bat 'docker tag civic-issue-frontend:latest samruddhi870/civic-issue-frontend:latest'
-            }
-        }
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKERHUB_USER',
+                        passwordVariable: 'DOCKERHUB_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        set +x
+                        echo "$DOCKERHUB_TOKEN" |
+                          docker login -u "$DOCKERHUB_USER" --password-stdin
 
-        stage('Push Images to Docker Hub') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKERHUB_USER',
-                    passwordVariable: 'DOCKERHUB_TOKEN'
-                )]) {
-                    bat 'echo %DOCKERHUB_TOKEN% | docker login -u %DOCKERHUB_USER% --password-stdin'
-                    bat 'docker push samruddhi870/civic-issue-backend:latest'
-                    bat 'docker push samruddhi870/civic-issue-frontend:latest'
-                    bat 'docker logout'
+                        docker push "$BACKEND_IMAGE:$BUILD_NUMBER"
+                        docker push "$BACKEND_IMAGE:latest"
+                        docker push "$FRONTEND_IMAGE:$BUILD_NUMBER"
+                        docker push "$FRONTEND_IMAGE:latest"
+                        docker logout
+                    '''
                 }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                bat 'kubectl apply -f k8s'
-                bat 'kubectl rollout restart deployment/civic-backend'
-                bat 'kubectl rollout restart deployment/civic-frontend'
-                bat 'kubectl rollout status deployment/civic-backend --timeout=180s'
-                bat 'kubectl rollout status deployment/civic-frontend --timeout=180s'
+                sh '''
+                    kubectl apply -f k8s/backend-deployment.yaml
+                    kubectl apply -f k8s/backend-service.yaml
+                    kubectl apply -f k8s/frontend-deployment.yaml
+                    kubectl apply -f k8s/frontend-service.yaml
+
+                    kubectl set image deployment/backend-deployment \
+                      backend="$BACKEND_IMAGE:$BUILD_NUMBER"
+
+                    kubectl set image deployment/frontend-deployment \
+                      frontend="$FRONTEND_IMAGE:$BUILD_NUMBER"
+
+                    kubectl rollout status deployment/backend-deployment --timeout=180s
+                    kubectl rollout status deployment/frontend-deployment --timeout=180s
+                '''
             }
         }
 
-        stage('Verify Kubernetes') {
+        stage('Verify Deployment') {
             steps {
-                bat 'kubectl get deployments'
-                bat 'kubectl get pods'
-                bat 'kubectl get services'
+                sh '''
+                    kubectl get deployments
+                    kubectl get pods
+                    kubectl get services
+                '''
             }
         }
     }
 
     post {
-        success {
-            echo 'Build, tests, Docker push and Kubernetes deployment completed successfully!'
-        }
-        failure {
-            echo 'Pipeline failed. Check Console Output for the first error.'
+        always {
+            sh 'docker logout >/dev/null 2>&1 || true'
         }
     }
 }
