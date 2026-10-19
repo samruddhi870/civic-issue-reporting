@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: YOUR_DOCKERHUB_USERNAME/civic-issue-frontend:latest
+          image: samruddhi870/civic-issue-frontendd:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 80

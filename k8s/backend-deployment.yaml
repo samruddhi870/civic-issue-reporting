@@ -14,10 +14,16 @@ spec:
     spec:
       containers:
         - name: backend
-          image: YOUR_DOCKERHUB_USERNAME/civic-issue-backend:latest
+          image: samruddhi870/civic-issue-backendd:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 5000
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 5
           volumeMounts:
             - name: uploads
               mountPath: /app/uploads
