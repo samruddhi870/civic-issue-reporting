@@ -28,7 +28,7 @@ function AppContent() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900">
   <div className="bg-blue-700 text-white text-center py-2 text-sm font-semibold">
-    CivicConnect — Version 3 | Improved Civic Issue Reporting
+    CivicConnect — Version 4 | Improved Civic Issue Reporting
   </div>
       <Navbar currentPage={currentPage} onNavigate={handleNavigate} />
 
